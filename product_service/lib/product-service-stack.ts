@@ -1,6 +1,8 @@
 import * as path from "path";
 import * as cdk from "aws-cdk-lib";
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import type { Construct } from "constructs";
@@ -9,16 +11,41 @@ export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    const productsTable = new dynamodb.Table(this, "ProductsTable", {
+      tableName: "products",
+      partitionKey: { name: "id", type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    const stocksTable = new dynamodb.Table(this, "StocksTable", {
+      tableName: "stocks",
+      partitionKey: {
+        name: "product_id",
+        type: dynamodb.AttributeType.STRING,
+      },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    const lambdaEnv = {
+      PRODUCTS_TABLE_NAME: productsTable.tableName,
+      STOCKS_TABLE_NAME: stocksTable.tableName,
+    };
+
+    const bundling = {
+      minify: true,
+      sourceMap: true,
+    };
+
     const getProductsList = new NodejsFunction(this, "getProductsList", {
       runtime: lambda.Runtime.NODEJS_20_X,
       functionName: "getProductsList",
       entry: path.join(__dirname, "../src/lambda/getProductsList.ts"),
       handler: "handler",
       timeout: cdk.Duration.seconds(10),
-      bundling: {
-        minify: true,
-        sourceMap: true,
-      },
+      environment: lambdaEnv,
+      bundling,
     });
 
     const getProductsById = new NodejsFunction(this, "getProductsById", {
@@ -27,11 +54,33 @@ export class ProductServiceStack extends cdk.Stack {
       entry: path.join(__dirname, "../src/lambda/getProductsById.ts"),
       handler: "handler",
       timeout: cdk.Duration.seconds(10),
-      bundling: {
-        minify: true,
-        sourceMap: true,
-      },
+      environment: lambdaEnv,
+      bundling,
     });
+
+    const createProduct = new NodejsFunction(this, "createProduct", {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      functionName: "createProduct",
+      entry: path.join(__dirname, "../src/lambda/createProduct.ts"),
+      handler: "handler",
+      timeout: cdk.Duration.seconds(10),
+      environment: lambdaEnv,
+      bundling,
+    });
+
+    productsTable.grantReadData(getProductsList);
+    stocksTable.grantReadData(getProductsList);
+    productsTable.grantReadData(getProductsById);
+    stocksTable.grantReadData(getProductsById);
+    productsTable.grantWriteData(createProduct);
+    stocksTable.grantWriteData(createProduct);
+    createProduct.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["dynamodb:TransactWriteItems"],
+        resources: [productsTable.tableArn, stocksTable.tableArn],
+      })
+    );
 
     const api = new apigateway.RestApi(this, "ProductServiceApi", {
       restApiName: "Product Service",
@@ -47,6 +96,10 @@ export class ProductServiceStack extends cdk.Stack {
       "GET",
       new apigateway.LambdaIntegration(getProductsList)
     );
+    products.addMethod(
+      "POST",
+      new apigateway.LambdaIntegration(createProduct)
+    );
 
     const productById = products.addResource("{productId}");
     productById.addMethod(
@@ -56,12 +109,22 @@ export class ProductServiceStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, "ProductServiceApiUrl", {
       value: api.urlForPath("/products"),
-      description: "GET /products — product list endpoint",
+      description: "Base URL for /products (GET list, POST create)",
     });
 
     new cdk.CfnOutput(this, "ProductServiceApiId", {
       value: api.restApiId,
       description: "API Gateway REST API id",
+    });
+
+    new cdk.CfnOutput(this, "ProductsTableName", {
+      value: productsTable.tableName,
+      description: "DynamoDB products table name",
+    });
+
+    new cdk.CfnOutput(this, "StocksTableName", {
+      value: stocksTable.tableName,
+      description: "DynamoDB stocks table name",
     });
   }
 }

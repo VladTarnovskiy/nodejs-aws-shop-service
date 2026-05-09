@@ -23,13 +23,49 @@ paths:
         - Products
       responses:
         "200":
-          description: Array of products
+          description: Array of products (joined catalog + stock counts)
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: "#/components/schemas/Product"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+    post:
+      summary: Create a product and initial stock row (transactional)
+      operationId: createProduct
+      tags:
+        - Products
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductRequest"
+      responses:
+        "201":
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
 
   /products/{productId}:
     get:
@@ -68,9 +104,33 @@ paths:
                 $ref: "#/components/schemas/ErrorMessage"
               example:
                 message: Product not found
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
 
 components:
   schemas:
+    CreateProductRequest:
+      type: object
+      required:
+        - title
+        - price
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        price:
+          type: integer
+          minimum: 0
+        count:
+          type: integer
+          minimum: 0
+          description: Initial stock; defaults to 0 when omitted
     Product:
       type: object
       required:
@@ -88,7 +148,7 @@ components:
         description:
           type: string
         price:
-          type: number
+          type: integer
         count:
           type: integer
           minimum: 0
