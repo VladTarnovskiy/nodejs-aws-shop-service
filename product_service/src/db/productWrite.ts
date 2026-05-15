@@ -1,13 +1,15 @@
 import { TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 import { randomUUID } from "crypto";
+import {
+  PRODUCTS_TABLE_NAME,
+  STOCKS_TABLE_NAME,
+} from "../../constants/dynamodb";
 import { dynamoDoc } from "./dynamoDocClient";
-import { requireTableNames } from "./dynamoTables";
 import type { CreateProductInput, ProductJoined } from "./productTypes";
 
 export async function createProductAndStockTxn(
   input: CreateProductInput
 ): Promise<ProductJoined> {
-  const { products, stocks } = requireTableNames();
   const id = randomUUID();
   const count = input.count ?? 0;
 
@@ -16,7 +18,7 @@ export async function createProductAndStockTxn(
       TransactItems: [
         {
           Put: {
-            TableName: products,
+            TableName: PRODUCTS_TABLE_NAME,
             Item: {
               id,
               title: input.title,
@@ -27,7 +29,7 @@ export async function createProductAndStockTxn(
         },
         {
           Put: {
-            TableName: stocks,
+            TableName: STOCKS_TABLE_NAME,
             Item: {
               product_id: id,
               count,

@@ -3,13 +3,18 @@ import {
   GetCommand,
   ScanCommand,
 } from "@aws-sdk/lib-dynamodb";
-import { chunk, requireTableNames } from "./dynamoTables";
+import {
+  PRODUCTS_TABLE_NAME,
+  STOCKS_TABLE_NAME,
+} from "../../constants/dynamodb";
+import { chunk } from "./dynamoTables";
 import { dynamoDoc } from "./dynamoDocClient";
 import type { ProductJoined } from "./productTypes";
 
 export async function listProductsJoined(): Promise<ProductJoined[]> {
-  const { products, stocks } = requireTableNames();
-  const scan = await dynamoDoc.send(new ScanCommand({ TableName: products }));
+  const scan = await dynamoDoc.send(
+    new ScanCommand({ TableName: PRODUCTS_TABLE_NAME })
+  );
   const rows = (scan.Items ?? []) as Array<{
     id: string;
     title: string;
@@ -32,11 +37,11 @@ export async function listProductsJoined(): Promise<ProductJoined[]> {
     const batch = await dynamoDoc.send(
       new BatchGetCommand({
         RequestItems: {
-          [stocks]: { Keys: keys },
+          [STOCKS_TABLE_NAME]: { Keys: keys },
         },
       })
     );
-    const stockItems = (batch.Responses?.[stocks] ?? []) as Array<{
+    const stockItems = (batch.Responses?.[STOCKS_TABLE_NAME] ?? []) as Array<{
       product_id: string;
       count: number;
     }>;
@@ -57,17 +62,16 @@ export async function listProductsJoined(): Promise<ProductJoined[]> {
 export async function findProductJoinedById(
   productId: string
 ): Promise<ProductJoined | null> {
-  const { products, stocks } = requireTableNames();
   const [productRes, stockRes] = await Promise.all([
     dynamoDoc.send(
       new GetCommand({
-        TableName: products,
+        TableName: PRODUCTS_TABLE_NAME,
         Key: { id: productId },
       })
     ),
     dynamoDoc.send(
       new GetCommand({
-        TableName: stocks,
+        TableName: STOCKS_TABLE_NAME,
         Key: { product_id: productId },
       })
     ),

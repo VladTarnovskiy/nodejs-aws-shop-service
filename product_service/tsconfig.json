@@ -19,6 +19,11 @@
     "outDir": "lib",
     "rootDir": "."
   },
-  "include": ["bin/**/*.ts", "lib/**/*.ts", "scripts/**/*.ts"],
+  "include": [
+    "bin/**/*.ts",
+    "lib/**/*.ts",
+    "scripts/**/*.ts",
+    "constants/**/*.ts"
+  ],
   "exclude": ["node_modules", "cdk.out"]
 }

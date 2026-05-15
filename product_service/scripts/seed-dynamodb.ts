@@ -3,15 +3,11 @@ import {
   DynamoDBDocumentClient,
   BatchWriteCommand,
 } from "@aws-sdk/lib-dynamodb";
+import {
+  PRODUCTS_TABLE_NAME,
+  STOCKS_TABLE_NAME,
+} from "../constants/dynamodb";
 import { products as seedProducts } from "../src/mock/products";
-
-function requireEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) {
-    throw new Error(`Missing env ${name}`);
-  }
-  return v;
-}
 
 async function writeAll(
   client: DynamoDBDocumentClient,
@@ -34,8 +30,8 @@ async function writeAll(
 }
 
 async function main(): Promise<void> {
-  const productsTable = requireEnv("PRODUCTS_TABLE_NAME");
-  const stocksTable = requireEnv("STOCKS_TABLE_NAME");
+  console.log(`Products table: ${PRODUCTS_TABLE_NAME}`);
+  console.log(`Stocks table: ${STOCKS_TABLE_NAME}`);
 
   const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
@@ -51,10 +47,10 @@ async function main(): Promise<void> {
     count,
   }));
 
-  console.log(`Writing ${productRows.length} products to ${productsTable} …`);
-  await writeAll(client, productsTable, productRows);
-  console.log(`Writing ${stockRows.length} stocks to ${stocksTable} …`);
-  await writeAll(client, stocksTable, stockRows);
+  console.log(`Writing ${productRows.length} products to ${PRODUCTS_TABLE_NAME} …`);
+  await writeAll(client, PRODUCTS_TABLE_NAME, productRows);
+  console.log(`Writing ${stockRows.length} stocks to ${STOCKS_TABLE_NAME} …`);
+  await writeAll(client, STOCKS_TABLE_NAME, stockRows);
   console.log("Done.");
 }
 

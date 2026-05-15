@@ -6,20 +6,24 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import type { Construct } from "constructs";
+import {
+  PRODUCTS_TABLE_NAME,
+  STOCKS_TABLE_NAME,
+} from "../constants/dynamodb";
 
 export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
     const productsTable = new dynamodb.Table(this, "ProductsTable", {
-      tableName: "products",
+      tableName: PRODUCTS_TABLE_NAME,
       partitionKey: { name: "id", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
     const stocksTable = new dynamodb.Table(this, "StocksTable", {
-      tableName: "stocks",
+      tableName: STOCKS_TABLE_NAME,
       partitionKey: {
         name: "product_id",
         type: dynamodb.AttributeType.STRING,
@@ -29,8 +33,8 @@ export class ProductServiceStack extends cdk.Stack {
     });
 
     const lambdaEnv = {
-      PRODUCTS_TABLE_NAME: productsTable.tableName,
-      STOCKS_TABLE_NAME: stocksTable.tableName,
+      PRODUCTS_TABLE_NAME,
+      STOCKS_TABLE_NAME,
     };
 
     const bundling = {
@@ -79,7 +83,7 @@ export class ProductServiceStack extends cdk.Stack {
         effect: iam.Effect.ALLOW,
         actions: ["dynamodb:TransactWriteItems"],
         resources: [productsTable.tableArn, stocksTable.tableArn],
-      })
+      }),
     );
 
     const api = new apigateway.RestApi(this, "ProductServiceApi", {
@@ -94,17 +98,14 @@ export class ProductServiceStack extends cdk.Stack {
     const products = api.root.addResource("products");
     products.addMethod(
       "GET",
-      new apigateway.LambdaIntegration(getProductsList)
+      new apigateway.LambdaIntegration(getProductsList),
     );
-    products.addMethod(
-      "POST",
-      new apigateway.LambdaIntegration(createProduct)
-    );
+    products.addMethod("POST", new apigateway.LambdaIntegration(createProduct));
 
     const productById = products.addResource("{productId}");
     productById.addMethod(
       "GET",
-      new apigateway.LambdaIntegration(getProductsById)
+      new apigateway.LambdaIntegration(getProductsById),
     );
 
     new cdk.CfnOutput(this, "ProductServiceApiUrl", {
