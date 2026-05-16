@@ -26,27 +26,75 @@ Create and configure the bucket **manually** (assignment requirement):
 
 Recommended settings for homework:
 
-| Setting | Suggestion |
-| ------- | ---------- |
-| Block Public Access | Keep all blocks **on** |
-| Versioning | Optional |
-| Encryption | SSE-S3 (default) is fine |
+| Setting             | Suggestion               |
+| ------------------- | ------------------------ |
+| Block Public Access | Keep all blocks **on**   |
+| Versioning          | Optional                 |
+| Encryption          | SSE-S3 (default) is fine |
 
 Optional: block public access and use default encryption; no public ACLs needed.
 
-### Wire the bucket name into CDK (optional output)
+### Wire the bucket name into CDK
 
-Before deploy, set the bucket name so the stack can echo it in outputs:
+Set **`IMPORT_BUCKET_NAME`** in **`constants/s3.ts`** to the bucket you created (must match the Console bucket name and region).
 
-```bash
-export IMPORT_BUCKET_NAME=your-bucket-name-here
+## Task 5.2 — `GET /import` (presigned upload URL)
+
+The **`importProductsFile`** Lambda returns a **presigned `PutObject` URL** as plain text for the key `uploaded/${name}`, where `name` is the **`name`** query string parameter (required at API Gateway).
+
+Example after deploy (use **`ImportServiceApiUrl`** from stack outputs):
+
+```text
+GET {ImportServiceApiUrl}import?name=products.csv
 ```
 
-On Windows (PowerShell):
+Response body: the signed URL string only (`text/plain`).
 
-```powershell
-$env:IMPORT_BUCKET_NAME = "your-bucket-name-here"
+### Frontend API paths
+
+Point your **import** API base URL at this stack’s API Gateway origin (same pattern as the product API). Example:
+
+```ts
+const API_PATHS = {
+  product: "https://xxxxxxxx.execute-api.eu-west-1.amazonaws.com/prod",
+  import: "https://yyyyyyyy.execute-api.eu-west-1.amazonaws.com/prod",
+};
+
+// Presigned URL:
+// `${API_PATHS.import}/import?name=${encodeURIComponent(fileName)}`
 ```
+
+Use the **`ImportServiceApiUrl`** output (trailing slash is fine either way with `/import`).
+
+### Загрузка из браузера (CORS на S3)
+
+Запрос **GET /import** идёт на API Gateway (CORS уже есть). **PUT** по presigned URL идёт на **S3** — CORS нужно включить **на вашем import-bucket** в консоли (bucket создаётся вручную по Task 5.1; имя должно совпадать с `constants/s3.ts` → `IMPORT_BUCKET_NAME`).
+
+**Важно:** если bucket с таким именем ещё не создан в том же регионе, что CDK (`us-east-1` и т.д.), деплой Lambda/API всё равно пройдёт, но загрузка и presigned URL не сработают, пока bucket не появится.
+
+S3 → ваш bucket → **Permissions** → **CORS** → вставьте:
+
+```json
+[
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["GET", "PUT", "HEAD", "POST"],
+    "AllowedOrigins": ["*"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3000
+  }
+]
+```
+
+Пример загрузки после получения URL (тело — `File` или `Blob`, без лишних заголовков):
+
+```ts
+const url = await fetch(`${importApi}import?name=${encodeURIComponent(file.name)}`)
+  .then((r) => r.text());
+await fetch(url, { method: "PUT", body: file });
+```
+
+Если бы в подпись входил фиксированный `Content-Type`, при несовпадении заголовка S3 отвечал бы 403 — в DevTools это часто выглядит как ошибка CORS.
 
 ## Install and deploy
 
@@ -62,10 +110,10 @@ First-time CDK in an account/region: run `npx cdk bootstrap` from either service
 
 ## Useful commands
 
-| Command | Purpose |
-| ------- | ------- |
-| `npm run build` | Compile TypeScript |
-| `npm run synth` | Synthesize CloudFormation |
+| Command          | Purpose                     |
+| ---------------- | --------------------------- |
+| `npm run build`  | Compile TypeScript          |
+| `npm run synth`  | Synthesize CloudFormation   |
 | `npm run deploy` | Deploy Import Service stack |
 
 ```bash
