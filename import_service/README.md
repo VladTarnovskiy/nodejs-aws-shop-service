@@ -15,28 +15,15 @@ nodejs-aws-shop-service/
   import_service/    ← this package
 ```
 
-## Task 5.1 — S3 bucket in the AWS Console
+## Task 5.1 — S3 bucket
 
-Create and configure the bucket **manually** (assignment requirement):
+**CDK создаёт bucket при deploy** (`new s3.Bucket` в `import-service-stack.ts`): имя **`{IMPORT_BUCKET_BASE_NAME}-{accountId}`** (например `aws-rs-front-import-bucket-tsk-642917031658`), CORS для браузерной загрузки, block public access, шифрование SSE-S3. Базовое имя — в `constants/s3.ts` → `IMPORT_BUCKET_BASE_NAME`.
 
-1. Open **Amazon S3** in the [AWS Console](https://console.aws.amazon.com/s3/).
-2. **Create bucket** (unique name, same **Region** as Product Service / CDK).
-3. Create a **folder** named `uploaded` (S3 treats this as the key prefix `uploaded/`).
-4. Note the **bucket name** for later steps.
+Папки `uploaded/` и `parsed/` — это префиксы ключей; появятся при первой загрузке и после парсинга, отдельно создавать в консоли не нужно.
 
-Recommended settings for homework:
+Если bucket с таким именем **уже есть** в аккаунте, deploy может упасть — удалите старый bucket или смените `IMPORT_BUCKET_BASE_NAME` в `constants/s3.ts`.
 
-| Setting             | Suggestion               |
-| ------------------- | ------------------------ |
-| Block Public Access | Keep all blocks **on**   |
-| Versioning          | Optional                 |
-| Encryption          | SSE-S3 (default) is fine |
-
-Optional: block public access and use default encryption; no public ACLs needed.
-
-### Wire the bucket name into CDK
-
-Set **`IMPORT_BUCKET_NAME`** in **`constants/s3.ts`** to the bucket you created (must match the Console bucket name and region).
+При `cdk destroy` bucket удаляется вместе со стеком (`RemovalPolicy: DESTROY`, `autoDeleteObjects: true`).
 
 ## Task 5.2 — `GET /import` (presigned upload URL)
 
@@ -68,23 +55,7 @@ Use the **`ImportServiceApiUrl`** output (trailing slash is fine either way with
 
 ### Загрузка из браузера (CORS на S3)
 
-Запрос **GET /import** идёт на API Gateway (CORS уже есть). **PUT** по presigned URL идёт на **S3** — CORS нужно включить **на вашем import-bucket** в консоли (bucket создаётся вручную по Task 5.1; имя должно совпадать с `constants/s3.ts` → `IMPORT_BUCKET_NAME`).
-
-**Важно:** если bucket с таким именем ещё не создан в том же регионе, что CDK (`us-east-1` и т.д.), деплой Lambda/API всё равно пройдёт, но загрузка и presigned URL не сработают, пока bucket не появится.
-
-S3 → ваш bucket → **Permissions** → **CORS** → вставьте:
-
-```json
-[
-  {
-    "AllowedHeaders": ["*"],
-    "AllowedMethods": ["GET", "PUT", "HEAD", "POST"],
-    "AllowedOrigins": ["*"],
-    "ExposeHeaders": ["ETag"],
-    "MaxAgeSeconds": 3000
-  }
-]
-```
+CORS на import-bucket задаётся в CDK (`cors` на `s3.Bucket`). После `npm run deploy` настраивать CORS в консоли не нужно.
 
 Пример загрузки после получения URL (тело — `File` или `Blob`, без лишних заголовков):
 
@@ -96,11 +67,22 @@ await fetch(url, { method: "PUT", body: file });
 
 Если бы в подпись входил фиксированный `Content-Type`, при несовпадении заголовка S3 отвечал бы 403 — в DevTools это часто выглядит как ошибка CORS.
 
-## Task 5.3 — `importFileParser` (S3 → CSV → CloudWatch)
+## Task 5.3+ — `importFileParser` (S3 → CSV → CloudWatch → `parsed/`)
 
-Lambda **`importFileParser`** срабатывает на **`s3:ObjectCreated:*`** только для ключей с префиксом **`uploaded/`**. Читает объект потоком из S3, парсит **csv-parser** и пишет каждую строку в **CloudWatch Logs**.
+Lambda **`importFileParser`** срабатывает на **`s3:ObjectCreated:*`** только для ключей с префиксом **`uploaded/`**. Читает объект **потоком** из S3, парсит **csv-parser**, логирует каждую строку в **CloudWatch**, затем **переносит** файл: копия в **`parsed/`**, удаление из **`uploaded/`**.
 
-После деплоя загрузите CSV через presigned URL, затем в консоли: **CloudWatch → Log groups → `/aws/lambda/importFileParser`**.
+После загрузки CSV проверьте:
+
+- **CloudWatch** → `/aws/lambda/importFileParser` — строки `CSV record:`
+- **S3** → bucket → `parsed/products-sample.csv` (файла в `uploaded/` больше нет)
+
+### Unit tests
+
+Моки S3 / presigner — без реальных вызовов AWS:
+
+```bash
+npm test
+```
 
 ## Install and deploy
 

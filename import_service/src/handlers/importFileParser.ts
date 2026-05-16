@@ -1,13 +1,40 @@
-import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  CopyObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} from "@aws-sdk/client-s3";
 import type { S3Event, S3EventRecord } from "aws-lambda";
 import csv from "csv-parser";
 import { Readable } from "stream";
-import { UPLOADED_PREFIX } from "../../constants/s3";
+import { importS3 } from "../s3/importS3Client";
+import {
+  isUnderUploadedPrefix,
+  uploadedKeyToParsedKey,
+} from "./importFileParserKeys";
 
-const s3 = new S3Client({});
+async function moveToParsedFolder(bucket: string, uploadedKey: string): Promise<void> {
+  const parsedKey = uploadedKeyToParsedKey(uploadedKey);
 
-function isUnderUploadedPrefix(key: string): boolean {
-  return key.startsWith(UPLOADED_PREFIX) && key.length > UPLOADED_PREFIX.length;
+  await importS3.send(
+    new CopyObjectCommand({
+      Bucket: bucket,
+      CopySource: `${bucket}/${uploadedKey}`,
+      Key: parsedKey,
+    }),
+  );
+
+  await importS3.send(
+    new DeleteObjectCommand({
+      Bucket: bucket,
+      Key: uploadedKey,
+    }),
+  );
+
+  console.log("Moved file to parsed folder:", {
+    bucket,
+    from: uploadedKey,
+    to: parsedKey,
+  });
 }
 
 async function parseObject(record: S3EventRecord): Promise<void> {
@@ -21,7 +48,7 @@ async function parseObject(record: S3EventRecord): Promise<void> {
 
   console.log("Parsing CSV from S3:", { bucket, key });
 
-  const response = await s3.send(
+  const response = await importS3.send(
     new GetObjectCommand({ Bucket: bucket, Key: key }),
   );
 
@@ -45,6 +72,8 @@ async function parseObject(record: S3EventRecord): Promise<void> {
       })
       .on("error", reject);
   });
+
+  await moveToParsedFolder(bucket, key);
 }
 
 export async function handler(event: S3Event): Promise<void> {

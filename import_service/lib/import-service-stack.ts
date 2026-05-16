@@ -6,17 +6,39 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3n from "aws-cdk-lib/aws-s3-notifications";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import type { Construct } from "constructs";
-import { IMPORT_BUCKET_NAME, UPLOADED_PREFIX } from "../constants/s3";
+import {
+  importBucketNameForAccount,
+  PARSED_PREFIX,
+  UPLOADED_PREFIX,
+} from "../constants/s3";
 
 export class ImportServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const importBucket = s3.Bucket.fromBucketName(
-      this,
-      "ImportBucket",
-      IMPORT_BUCKET_NAME,
-    );
+    const importBucketName = importBucketNameForAccount(this.account);
+
+    const importBucket = new s3.Bucket(this, "ImportBucket", {
+      bucketName: importBucketName,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+      cors: [
+        {
+          allowedMethods: [
+            s3.HttpMethods.GET,
+            s3.HttpMethods.PUT,
+            s3.HttpMethods.HEAD,
+            s3.HttpMethods.POST,
+          ],
+          allowedOrigins: ["*"],
+          allowedHeaders: ["*"],
+          exposedHeaders: ["ETag"],
+          maxAge: 3000,
+        },
+      ],
+    });
 
     const importProductsFile = new NodejsFunction(this, "importProductsFile", {
       runtime: lambda.Runtime.NODEJS_20_X,
@@ -25,7 +47,7 @@ export class ImportServiceStack extends cdk.Stack {
       handler: "handler",
       timeout: cdk.Duration.seconds(10),
       environment: {
-        IMPORT_BUCKET_NAME,
+        IMPORT_BUCKET_NAME: importBucket.bucketName,
       },
       bundling: {
         minify: true,
@@ -42,7 +64,7 @@ export class ImportServiceStack extends cdk.Stack {
       handler: "handler",
       timeout: cdk.Duration.seconds(30),
       environment: {
-        IMPORT_BUCKET_NAME,
+        IMPORT_BUCKET_NAME: importBucket.bucketName,
       },
       bundling: {
         minify: true,
@@ -50,7 +72,7 @@ export class ImportServiceStack extends cdk.Stack {
       },
     });
 
-    importBucket.grantRead(importFileParser);
+    importBucket.grantReadWrite(importFileParser);
 
     importBucket.addEventNotification(
       s3.EventType.OBJECT_CREATED,
@@ -88,9 +110,14 @@ export class ImportServiceStack extends cdk.Stack {
       description: "S3 object key prefix for uploaded CSV files",
     });
 
+    new cdk.CfnOutput(this, "ParsedPrefix", {
+      value: PARSED_PREFIX,
+      description: "S3 object key prefix after CSV is parsed",
+    });
+
     new cdk.CfnOutput(this, "ImportBucketName", {
-      value: IMPORT_BUCKET_NAME,
-      description: "S3 bucket used for import (from constants/s3.ts)",
+      value: importBucket.bucketName,
+      description: "S3 import bucket (created by this stack)",
     });
   }
 }

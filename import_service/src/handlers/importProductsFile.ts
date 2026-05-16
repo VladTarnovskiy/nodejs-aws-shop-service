@@ -1,14 +1,14 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { IMPORT_BUCKET_NAME, UPLOADED_PREFIX } from "../../constants/s3";
+import { UPLOADED_PREFIX } from "../../constants/s3";
+import { resolveImportBucketName } from "../s3/bucketName";
+import { importS3 } from "../s3/importS3Client";
 
 const PRESIGN_EXPIRES_SECONDS = 3600;
 
 /** Safe single-segment filenames for `uploaded/${name}`. */
 const CSV_NAME_PATTERN = /^[a-zA-Z0-9._-]+\.csv$/;
-
-const s3 = new S3Client({});
 
 function textResponse(statusCode: number, body: string): APIGatewayProxyResult {
   return {
@@ -24,7 +24,7 @@ function textResponse(statusCode: number, body: string): APIGatewayProxyResult {
 export async function handler(
   event: APIGatewayProxyEvent,
 ): Promise<APIGatewayProxyResult> {
-  const bucketName = IMPORT_BUCKET_NAME;
+  const bucketName = resolveImportBucketName();
   if (!bucketName) {
     return textResponse(500, "Server configuration error");
   }
@@ -41,14 +41,12 @@ export async function handler(
   }
 
   const key = `${UPLOADED_PREFIX}${name}`;
-  // Do not set ContentType here: it becomes part of the signature and the
-  // browser PUT must send the exact same header or S3 returns 403 (often shown as CORS).
   const command = new PutObjectCommand({
     Bucket: bucketName,
     Key: key,
   });
 
-  const signedUrl = await getSignedUrl(s3, command, {
+  const signedUrl = await getSignedUrl(importS3, command, {
     expiresIn: PRESIGN_EXPIRES_SECONDS,
   });
 

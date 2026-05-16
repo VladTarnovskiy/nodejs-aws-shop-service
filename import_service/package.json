@@ -7,7 +7,9 @@
     "watch": "tsc -w",
     "cdk": "cdk",
     "synth": "cdk synth",
-    "deploy": "cdk deploy --require-approval never"
+    "deploy": "cdk deploy --require-approval never",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.145",
@@ -15,7 +17,8 @@
     "aws-cdk": "^2.150.0",
     "esbuild": "^0.21.5",
     "ts-node": "^10.9.2",
-    "typescript": "~5.4.5"
+    "typescript": "~5.4.5",
+    "vitest": "^2.1.6"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.726.1",
