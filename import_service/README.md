@@ -96,6 +96,12 @@ await fetch(url, { method: "PUT", body: file });
 
 Если бы в подпись входил фиксированный `Content-Type`, при несовпадении заголовка S3 отвечал бы 403 — в DevTools это часто выглядит как ошибка CORS.
 
+## Task 5.3 — `importFileParser` (S3 → CSV → CloudWatch)
+
+Lambda **`importFileParser`** срабатывает на **`s3:ObjectCreated:*`** только для ключей с префиксом **`uploaded/`**. Читает объект потоком из S3, парсит **csv-parser** и пишет каждую строку в **CloudWatch Logs**.
+
+После деплоя загрузите CSV через presigned URL, затем в консоли: **CloudWatch → Log groups → `/aws/lambda/importFileParser`**.
+
 ## Install and deploy
 
 From `import_service/`:
