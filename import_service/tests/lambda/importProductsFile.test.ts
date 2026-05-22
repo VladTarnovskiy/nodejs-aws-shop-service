@@ -2,6 +2,8 @@ import type { APIGatewayProxyEvent } from "aws-lambda";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UPLOADED_PREFIX } from "../../constants/s3";
+import { handler } from "../../src/lambda/importProductsFile";
+import { importS3 } from "../../src/s3/importS3Client";
 
 const TEST_BUCKET_NAME = "aws-rs-front-import-bucket-tsk-642917031658";
 
@@ -10,9 +12,6 @@ const mockGetSignedUrl = vi.fn();
 vi.mock("@aws-sdk/s3-request-presigner", () => ({
   getSignedUrl: (...args: unknown[]) => mockGetSignedUrl(...args),
 }));
-
-import { importS3 } from "../s3/importS3Client";
-import { handler } from "./importProductsFile";
 
 describe("importProductsFile handler", () => {
   beforeEach(() => {

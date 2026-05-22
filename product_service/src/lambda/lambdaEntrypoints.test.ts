@@ -1,5 +1,6 @@
 import type { APIGatewayProxyEvent } from "aws-lambda";
 import { describe, expect, it } from "vitest";
+import { handler as batchHandler } from "./catalogBatchProcess";
 import { handler as createHandler } from "./createProduct";
 import { handler as byIdHandler } from "./getProductsById";
 import { handler as listHandler } from "./getProductsList";
@@ -29,5 +30,18 @@ describe("lambda entry re-exports", () => {
       body: JSON.stringify({ title: "Entry", price: 1 }),
     } as APIGatewayProxyEvent);
     expect(res.statusCode).toBe(201);
+  });
+
+  it("catalogBatchProcess handles SQS events", async () => {
+    await expect(
+      batchHandler({
+        Records: [
+          {
+            messageId: "1",
+            body: JSON.stringify({ title: "Entry", price: 1 }),
+          },
+        ],
+      } as never),
+    ).resolves.toBeUndefined();
   });
 });
