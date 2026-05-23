@@ -9,18 +9,22 @@
     "test:watch": "vitest",
     "cdk": "cdk",
     "synth": "cdk synth",
-    "deploy": "cdk deploy --require-approval never"
+    "deploy": "cdk deploy --require-approval never",
+    "seed": "ts-node --prefer-ts-exts scripts/seed-dynamodb.ts"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.145",
     "@types/node": "^20.14.0",
     "aws-cdk": "^2.150.0",
-    "ts-node": "^10.9.2",
+    "dotenv": "^17.4.2",
     "esbuild": "^0.21.5",
+    "ts-node": "^10.9.2",
     "typescript": "~5.4.5",
     "vitest": "^2.1.6"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.726.1",
+    "@aws-sdk/lib-dynamodb": "^3.726.1",
     "aws-cdk-lib": "^2.150.0",
     "constructs": "^10.3.0"
   }

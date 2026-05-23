@@ -1,14 +1,16 @@
 import type { APIGatewayProxyEvent } from "aws-lambda";
 import { describe, expect, it } from "vitest";
-import { listProducts } from "../catalog/productCatalog";
+import { products as mockProducts } from "../mock/products";
 import { handler } from "./getProductById";
 
 function eventWithProductId(
-  productId: string | undefined
+  productId: string | undefined,
 ): APIGatewayProxyEvent {
   return {
+    httpMethod: "GET",
+    path: `/products/${productId ?? ""}`,
     pathParameters: productId !== undefined ? { productId } : undefined,
-  } as APIGatewayProxyEvent;
+  } as unknown as APIGatewayProxyEvent;
 }
 
 describe("getProductById handler", () => {
@@ -21,7 +23,7 @@ describe("getProductById handler", () => {
 
   it("returns 404 when product is not found", async () => {
     const res = await handler(
-      eventWithProductId("00000000-0000-0000-0000-000000000000")
+      eventWithProductId("00000000-0000-0000-0000-000000000000"),
     );
 
     expect(res.statusCode).toBe(404);
@@ -29,7 +31,7 @@ describe("getProductById handler", () => {
   });
 
   it("returns 200 and product when id exists", async () => {
-    const product = listProducts()[0];
+    const product = mockProducts[0];
     const res = await handler(eventWithProductId(product.id));
 
     expect(res.statusCode).toBe(200);
