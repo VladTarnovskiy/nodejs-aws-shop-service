@@ -9,39 +9,60 @@ import {
 import type { CreateProductTopicEmails } from "./resolveCreateProductTopicEmails";
 
 /**
- * Filter policies are defined per email subscription.
- * Lambda must publish matching MessageAttributes on each notification.
+ * SNS allows only one subscription per (topic, protocol, endpoint).
+ * If all emails are the same, create a single subscription without a filter.
  */
 export function configureCreateProductTopicSubscriptions(
   scope: Construct,
   topic: sns.ITopic,
   emails: CreateProductTopicEmails,
 ): void {
+  const { defaultEmail, highPriceEmail, lowStockEmail } = emails;
+  const allSameEmail =
+    defaultEmail === highPriceEmail && defaultEmail === lowStockEmail;
+
+  if (allSameEmail) {
+    new sns.CfnSubscription(scope, "CreateProductTopicAllProductsSub", {
+      topicArn: topic.topicArn,
+      protocol: sns.SubscriptionProtocol.EMAIL,
+      endpoint: defaultEmail,
+      filterPolicy: {},
+    });
+    return;
+  }
+
   new sns.Subscription(scope, "CreateProductTopicDefaultSub", {
     topic,
-    endpoint: emails.defaultEmail,
+    endpoint: defaultEmail,
     protocol: sns.SubscriptionProtocol.EMAIL,
   });
 
-  new sns.Subscription(scope, "CreateProductTopicHighPriceSub", {
-    topic,
-    endpoint: emails.highPriceEmail,
-    protocol: sns.SubscriptionProtocol.EMAIL,
-    filterPolicy: {
-      [SNS_PRODUCT_ATTR_PRICE]: sns.SubscriptionFilter.numericFilter({
-        greaterThanOrEqualTo: HIGH_PRICE_THRESHOLD,
-      }),
-    },
-  });
+  if (highPriceEmail !== defaultEmail) {
+    new sns.Subscription(scope, "CreateProductTopicHighPriceSub", {
+      topic,
+      endpoint: highPriceEmail,
+      protocol: sns.SubscriptionProtocol.EMAIL,
+      filterPolicy: {
+        [SNS_PRODUCT_ATTR_PRICE]: sns.SubscriptionFilter.numericFilter({
+          greaterThanOrEqualTo: HIGH_PRICE_THRESHOLD,
+        }),
+      },
+    });
+  }
 
-  new sns.Subscription(scope, "CreateProductTopicLowStockSub", {
-    topic,
-    endpoint: emails.lowStockEmail,
-    protocol: sns.SubscriptionProtocol.EMAIL,
-    filterPolicy: {
-      [SNS_PRODUCT_ATTR_COUNT]: sns.SubscriptionFilter.numericFilter({
-        lessThan: LOW_STOCK_THRESHOLD,
-      }),
-    },
-  });
+  if (
+    lowStockEmail !== defaultEmail &&
+    lowStockEmail !== highPriceEmail
+  ) {
+    new sns.Subscription(scope, "CreateProductTopicLowStockSub", {
+      topic,
+      endpoint: lowStockEmail,
+      protocol: sns.SubscriptionProtocol.EMAIL,
+      filterPolicy: {
+        [SNS_PRODUCT_ATTR_COUNT]: sns.SubscriptionFilter.numericFilter({
+          lessThan: LOW_STOCK_THRESHOLD,
+        }),
+      },
+    });
+  }
 }

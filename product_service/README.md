@@ -65,7 +65,9 @@ CREATE_PRODUCT_TOPIC_EMAIL_LOW_STOCK=you-low-stock@example.com
 | `CREATE_PRODUCT_TOPIC_EMAIL_HIGH_PRICE` | Filtered subscription — `price` attribute **≥ 50** |
 | `CREATE_PRODUCT_TOPIC_EMAIL_LOW_STOCK` | Filtered subscription — `count` attribute **&lt; 10** |
 
-You may use the **same address** for all three (useful for testing). AWS will still send **separate** “Confirm subscription” emails — confirm each one.
+**Same email for all three variables:** AWS allows only **one** subscription per topic + email. The stack then creates a **single** subscription **without a filter** (you receive every import notification). Filtered subscriptions are created only when the three addresses are **different**.
+
+**Different emails:** you get up to three subscriptions; confirm each “Confirm subscription” message in inbox.
 
 **Alternative:** set the same values in **`cdk.json`** → `context`:
 
