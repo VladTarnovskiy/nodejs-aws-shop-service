@@ -1,11 +1,18 @@
 import type { APIGatewayProxyEvent } from "aws-lambda";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { handler as batchHandler } from "../../src/lambda/catalogBatchProcess";
+import { productSns } from "../../src/sns/productSnsClient";
 import { handler as createHandler } from "../../src/lambda/createProduct";
 import { handler as byIdHandler } from "../../src/lambda/getProductsById";
 import { handler as listHandler } from "../../src/lambda/getProductsList";
 
 describe("lambda handlers", () => {
+  beforeEach(() => {
+    process.env.CREATE_PRODUCT_TOPIC_ARN =
+      "arn:aws:sns:eu-west-1:642917031658:createProductTopic";
+    vi.spyOn(productSns, "send").mockResolvedValue({});
+  });
+
   it("getProductsList entry delegates to list handler", async () => {
     const res = await listHandler({
       httpMethod: "GET",

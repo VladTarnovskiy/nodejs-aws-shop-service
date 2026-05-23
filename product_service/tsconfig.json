@@ -23,7 +23,8 @@
     "bin/**/*.ts",
     "lib/**/*.ts",
     "scripts/**/*.ts",
-    "constants/**/*.ts"
+    "constants/**/*.ts",
+    "utils/**/*.ts"
   ],
   "exclude": ["node_modules", "cdk.out"]
 }

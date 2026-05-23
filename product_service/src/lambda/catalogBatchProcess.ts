@@ -1,5 +1,8 @@
+import { PublishCommand } from "@aws-sdk/client-sns";
 import type { SQSEvent, SQSRecord } from "aws-lambda";
 import { createProductAndStockTxn } from "../db/productWrite";
+import type { ProductJoined } from "../db/productTypes";
+import { productSns } from "../sns/productSnsClient";
 import { validateCreateProductBody } from "../utils/productValidation";
 
 /** Coerce CSV string fields from SQS messages before API-style validation. */
@@ -32,6 +35,26 @@ export function normalizeCatalogPayload(payload: unknown): unknown {
   return normalized;
 }
 
+function createProductTopicArn(): string {
+  const arn = process.env.CREATE_PRODUCT_TOPIC_ARN;
+  if (!arn) {
+    throw new Error("CREATE_PRODUCT_TOPIC_ARN is not configured");
+  }
+  return arn;
+}
+
+export async function notifyProductCreated(
+  product: ProductJoined,
+): Promise<void> {
+  await productSns.send(
+    new PublishCommand({
+      TopicArn: createProductTopicArn(),
+      Subject: `Product created: ${product.title}`,
+      Message: JSON.stringify(product),
+    }),
+  );
+}
+
 async function processRecord(record: SQSRecord): Promise<void> {
   let parsed: unknown;
   try {
@@ -52,6 +75,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
   }
 
   const created = await createProductAndStockTxn(validation.value);
+  await notifyProductCreated(created);
   console.log("Created product from catalog batch:", {
     id: created.id,
     title: created.title,

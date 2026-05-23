@@ -6,6 +6,8 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as lambdaEventSources from "aws-cdk-lib/aws-lambda-event-sources";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import * as sns from "aws-cdk-lib/aws-sns";
+import * as subscriptions from "aws-cdk-lib/aws-sns-subscriptions";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import type { Construct } from "constructs";
 import {
@@ -13,6 +15,8 @@ import {
   STOCKS_TABLE_NAME,
 } from "../constants/dynamodb";
 import { CATALOG_ITEMS_QUEUE_NAME } from "../constants/sqs";
+import { CREATE_PRODUCT_TOPIC_NAME } from "../constants/sns";
+import { resolveCreateProductTopicEmail } from "../utils/resolveCreateProductTopicEmail";
 
 export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -93,13 +97,25 @@ export class ProductServiceStack extends cdk.Stack {
       queueName: CATALOG_ITEMS_QUEUE_NAME,
     });
 
+    const createProductTopic = new sns.Topic(this, "CreateProductTopic", {
+      topicName: CREATE_PRODUCT_TOPIC_NAME,
+      displayName: "Create Product Topic",
+    });
+
+    createProductTopic.addSubscription(
+      new subscriptions.EmailSubscription(resolveCreateProductTopicEmail(this)),
+    );
+
     const catalogBatchProcess = new NodejsFunction(this, "catalogBatchProcess", {
       runtime: lambda.Runtime.NODEJS_20_X,
       functionName: "catalogBatchProcess",
       entry: path.join(__dirname, "../src/lambda/catalogBatchProcess.ts"),
       handler: "handler",
       timeout: cdk.Duration.seconds(30),
-      environment: lambdaEnv,
+      environment: {
+        ...lambdaEnv,
+        CREATE_PRODUCT_TOPIC_ARN: createProductTopic.topicArn,
+      },
       bundling,
     });
 
@@ -118,6 +134,8 @@ export class ProductServiceStack extends cdk.Stack {
         resources: [productsTable.tableArn, stocksTable.tableArn],
       }),
     );
+
+    createProductTopic.grantPublish(catalogBatchProcess);
 
     const api = new apigateway.RestApi(this, "ProductServiceApi", {
       restApiName: "Product Service",
@@ -164,6 +182,11 @@ export class ProductServiceStack extends cdk.Stack {
     new cdk.CfnOutput(this, "CatalogItemsQueueUrl", {
       value: catalogItemsQueue.queueUrl,
       description: "SQS queue URL for catalog CSV records",
+    });
+
+    new cdk.CfnOutput(this, "CreateProductTopicArn", {
+      value: createProductTopic.topicArn,
+      description: "SNS topic ARN for product-created notifications",
     });
   }
 }
