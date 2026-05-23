@@ -7,7 +7,6 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as lambdaEventSources from "aws-cdk-lib/aws-lambda-event-sources";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import * as sns from "aws-cdk-lib/aws-sns";
-import * as subscriptions from "aws-cdk-lib/aws-sns-subscriptions";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import type { Construct } from "constructs";
 import {
@@ -16,7 +15,8 @@ import {
 } from "../constants/dynamodb";
 import { CATALOG_ITEMS_QUEUE_NAME } from "../constants/sqs";
 import { CREATE_PRODUCT_TOPIC_NAME } from "../constants/sns";
-import { resolveCreateProductTopicEmail } from "../utils/resolveCreateProductTopicEmail";
+import { configureCreateProductTopicSubscriptions } from "../utils/configureCreateProductTopicSubscriptions";
+import { resolveCreateProductTopicEmails } from "../utils/resolveCreateProductTopicEmails";
 
 export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -102,8 +102,10 @@ export class ProductServiceStack extends cdk.Stack {
       displayName: "Create Product Topic",
     });
 
-    createProductTopic.addSubscription(
-      new subscriptions.EmailSubscription(resolveCreateProductTopicEmail(this)),
+    configureCreateProductTopicSubscriptions(
+      this,
+      createProductTopic,
+      resolveCreateProductTopicEmails(this),
     );
 
     const catalogBatchProcess = new NodejsFunction(this, "catalogBatchProcess", {

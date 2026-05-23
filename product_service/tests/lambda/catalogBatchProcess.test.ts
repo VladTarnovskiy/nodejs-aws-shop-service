@@ -60,16 +60,21 @@ describe("notifyProductCreated", () => {
 
     expect(snsSendSpy).toHaveBeenCalledTimes(1);
     const command = snsSendSpy.mock.calls[0][0] as PublishCommand;
-    expect(command.input).toEqual({
-      TopicArn: TEST_TOPIC_ARN,
-      Subject: "Product created: Book A",
-      Message: JSON.stringify({
+    expect(command.input.TopicArn).toBe(TEST_TOPIC_ARN);
+    expect(command.input.Subject).toBe("Product created: Book A");
+    expect(command.input.Message).toBe(
+      JSON.stringify({
         id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
         title: "Book A",
         description: "Desc",
         price: 12,
         count: 3,
       }),
+    );
+    expect(command.input.MessageAttributes).toEqual({
+      price: { DataType: "Number", StringValue: "12" },
+      count: { DataType: "Number", StringValue: "3" },
+      title: { DataType: "String", StringValue: "Book A" },
     });
   });
 });
@@ -126,5 +131,19 @@ describe("catalogBatchProcess handler", () => {
       price: 10,
       count: undefined,
     });
+  });
+
+  it("skips non-JSON SQS bodies without creating products or sending SNS", async () => {
+    await handler({
+      Records: [
+        {
+          messageId: "bad-json",
+          body: "not-json",
+        },
+      ],
+    } as SQSEvent);
+
+    expect(productWrite.createProductAndStockTxn).not.toHaveBeenCalled();
+    expect(snsSendSpy).not.toHaveBeenCalled();
   });
 });

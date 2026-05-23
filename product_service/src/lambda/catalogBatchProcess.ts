@@ -2,6 +2,7 @@ import { PublishCommand } from "@aws-sdk/client-sns";
 import type { SQSEvent, SQSRecord } from "aws-lambda";
 import { createProductAndStockTxn } from "../db/productWrite";
 import type { ProductJoined } from "../db/productTypes";
+import { buildProductCreatedMessageAttributes } from "../sns/productCreatedMessageAttributes";
 import { productSns } from "../sns/productSnsClient";
 import { validateCreateProductBody } from "../utils/productValidation";
 
@@ -51,6 +52,7 @@ export async function notifyProductCreated(
       TopicArn: createProductTopicArn(),
       Subject: `Product created: ${product.title}`,
       Message: JSON.stringify(product),
+      MessageAttributes: buildProductCreatedMessageAttributes(product),
     }),
   );
 }
