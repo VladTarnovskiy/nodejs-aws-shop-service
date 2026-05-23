@@ -14,10 +14,10 @@ Product rows and stock counts are stored in separate tables and **joined** in La
 
 The assignment describes creating these in the Console; **this repo also provisions the same schemas via CDK** on deploy (table names **`products`** and **`stocks`**).
 
-| Table     | Partition key                     | Attributes (items)                                                      |
-| --------- | --------------------------------- | ----------------------------------------------------------------------- |
-| `products`| `id` (String, UUID)               | `title` (required), `description`, `price` (integer ≥ 0)              |
-| `stocks`  | `product_id` (String, product id)| `count` (integer ≥ 0)                                                   |
+| Table      | Partition key                     | Attributes (items)                                       |
+| ---------- | --------------------------------- | -------------------------------------------------------- |
+| `products` | `id` (String, UUID)               | `title` (required), `description`, `price` (integer ≥ 0) |
+| `stocks`   | `product_id` (String, product id) | `count` (integer ≥ 0)                                    |
 
 Lambdas receive `PRODUCTS_TABLE_NAME` and `STOCKS_TABLE_NAME` from the stack outputs / environment variables.
 
@@ -75,11 +75,11 @@ Use your actual names from the **`ProductsTableName`** and **`StocksTableName`**
 
 ## After deploy — HTTP API
 
-| Method & path               | Lambda            | Behaviour                                      |
-| --------------------------- | ----------------- | ---------------------------------------------- |
-| `GET {ProductServiceApiUrl}`| `getProductsList` | Lists products joined with `count` from stocks |
-| `GET .../products/{id}`    | `getProductsById` | One joined product                             |
-| `POST {ProductServiceApiUrl}` | `createProduct` | Validates body; transactional create Product + Stock; **201** + body |
+| Method & path                 | Lambda            | Behaviour                                                            |
+| ----------------------------- | ----------------- | -------------------------------------------------------------------- |
+| `GET {ProductServiceApiUrl}`  | `getProductsList` | Lists products joined with `count` from stocks                       |
+| `GET .../products/{id}`       | `getProductsById` | One joined product                                                   |
+| `POST {ProductServiceApiUrl}` | `createProduct`   | Validates body; transactional create Product + Stock; **201** + body |
 
 Example:
 
@@ -135,7 +135,7 @@ npm run test:watch
 | `npm run watch`      | Watch mode for TypeScript                           |
 | `npm test`           | Run unit tests (Vitest)                             |
 | `npm run test:watch` | Vitest watch mode                                   |
-| `npm run synth`      | Synthesize CDK to `cdk.out/`                       |
+| `npm run synth`      | Synthesize CDK to `cdk.out/`                        |
 | `npm run deploy`     | Deploy stack without interactive approval prompts   |
 | `npm run seed`       | Put sample products + stocks (requires env + creds) |
 
