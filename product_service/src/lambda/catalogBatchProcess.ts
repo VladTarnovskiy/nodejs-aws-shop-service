@@ -1,6 +1,6 @@
 import type { SQSEvent, SQSRecord } from "aws-lambda";
 import { createProductAndStockTxn } from "../db/productWrite";
-import { validateCreateProductBody } from "../handlers/productValidation";
+import { validateCreateProductBody } from "../utils/productValidation";
 
 /** Coerce CSV string fields from SQS messages before API-style validation. */
 export function normalizeCatalogPayload(payload: unknown): unknown {
@@ -41,9 +41,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
     return;
   }
 
-  const validation = validateCreateProductBody(
-    normalizeCatalogPayload(parsed),
-  );
+  const validation = validateCreateProductBody(normalizeCatalogPayload(parsed));
   if (!validation.ok) {
     console.error(
       "Invalid catalog item:",

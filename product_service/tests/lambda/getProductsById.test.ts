@@ -1,7 +1,7 @@
 import type { APIGatewayProxyEvent } from "aws-lambda";
 import { describe, expect, it } from "vitest";
-import { products as mockProducts } from "../mock/products";
-import { handler } from "./getProductById";
+import { handler } from "../../src/lambda/getProductsById";
+import { products as mockProducts } from "../../src/mock/products";
 
 function eventWithProductId(
   productId: string | undefined,

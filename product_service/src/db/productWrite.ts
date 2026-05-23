@@ -8,7 +8,7 @@ import { dynamoDoc } from "./dynamoDocClient";
 import type { CreateProductInput, ProductJoined } from "./productTypes";
 
 export async function createProductAndStockTxn(
-  input: CreateProductInput
+  input: CreateProductInput,
 ): Promise<ProductJoined> {
   const id = randomUUID();
   const count = input.count ?? 0;
@@ -37,7 +37,7 @@ export async function createProductAndStockTxn(
           },
         },
       ],
-    })
+    }),
   );
 
   return {

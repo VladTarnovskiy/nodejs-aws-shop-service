@@ -1,11 +1,11 @@
 import type { APIGatewayProxyEvent } from "aws-lambda";
 import { describe, expect, it } from "vitest";
-import { handler as batchHandler } from "./catalogBatchProcess";
-import { handler as createHandler } from "./createProduct";
-import { handler as byIdHandler } from "./getProductsById";
-import { handler as listHandler } from "./getProductsList";
+import { handler as batchHandler } from "../../src/lambda/catalogBatchProcess";
+import { handler as createHandler } from "../../src/lambda/createProduct";
+import { handler as byIdHandler } from "../../src/lambda/getProductsById";
+import { handler as listHandler } from "../../src/lambda/getProductsList";
 
-describe("lambda entry re-exports", () => {
+describe("lambda handlers", () => {
   it("getProductsList entry delegates to list handler", async () => {
     const res = await listHandler({
       httpMethod: "GET",

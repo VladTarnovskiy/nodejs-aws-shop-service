@@ -1,10 +1,10 @@
 import type { SQSEvent, SQSRecord } from "aws-lambda";
 import { describe, expect, it } from "vitest";
-import * as productWrite from "../db/productWrite";
+import * as productWrite from "../../src/db/productWrite";
 import {
   handler,
   normalizeCatalogPayload,
-} from "./catalogBatchProcess";
+} from "../../src/lambda/catalogBatchProcess";
 
 function sqsRecord(body: unknown, messageId = "msg-1"): SQSRecord {
   return {

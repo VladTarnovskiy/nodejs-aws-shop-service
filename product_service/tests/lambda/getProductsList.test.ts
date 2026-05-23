@@ -1,7 +1,7 @@
 import type { APIGatewayProxyEvent } from "aws-lambda";
 import { describe, expect, it } from "vitest";
-import { products as mockProducts } from "../mock/products";
-import { handler } from "./getProductsList";
+import { handler } from "../../src/lambda/getProductsList";
+import { products as mockProducts } from "../../src/mock/products";
 
 describe("getProductsList handler", () => {
   it("returns 200 and JSON array of products", async () => {

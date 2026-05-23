@@ -1,7 +1,7 @@
 import type { APIGatewayProxyEvent } from "aws-lambda";
 import { describe, expect, it } from "vitest";
-import * as productWrite from "../db/productWrite";
-import { handler } from "./createProduct";
+import * as productWrite from "../../src/db/productWrite";
+import { handler } from "../../src/lambda/createProduct";
 
 function eventWithBody(body: string | undefined): APIGatewayProxyEvent {
   return {
