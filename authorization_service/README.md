@@ -17,7 +17,7 @@ Use your **GitHub account login** as the variable name and `TEST_PASSWORD` as th
 VladTarnovskiy=TEST_PASSWORD
 ```
 
-Do **not** commit `.env` — it is listed in `.gitignore`.
+As example use .env.template
 
 ## Install and deploy
 
@@ -34,11 +34,11 @@ Stack outputs:
 
 ## Authorizer behavior
 
-| Case | Response |
-| ---- | -------- |
-| Missing / empty `Authorization` token | **401** (`Unauthorized` error) |
-| Invalid Basic token or wrong credentials | **403** (IAM policy with `Effect: Deny`) |
-| Valid `Authorization: Basic {base64(login:password)}` | **Allow** IAM policy for `methodArn` |
+| Case                                                  | Response                                 |
+| ----------------------------------------------------- | ---------------------------------------- |
+| Missing / empty `Authorization` token                 | **401** (`Unauthorized` error)           |
+| Invalid Basic token or wrong credentials              | **403** (IAM policy with `Effect: Deny`) |
+| Valid `Authorization: Basic {base64(login:password)}` | **Allow** IAM policy for `methodArn`     |
 
 Example header value:
 
