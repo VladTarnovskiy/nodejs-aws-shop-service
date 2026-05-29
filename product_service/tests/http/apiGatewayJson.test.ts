@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { corsJsonHeaders, jsonResponse } from "./apiGatewayJson";
+import { corsJsonHeaders, jsonResponse } from "../../src/http/apiGatewayJson";
 
 describe("apiGatewayJson", () => {
   it("jsonResponse sets status, CORS headers, and stringified body", () => {

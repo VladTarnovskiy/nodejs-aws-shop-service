@@ -39,6 +39,48 @@ From this directory (`product_service/`):
 npm install
 ```
 
+## SNS `createProductTopic` — emails in `.env`
+
+Before **`npm run deploy`**, create a **`.env`** file in `product_service/` (same folder as `package.json`). CDK reads it via `dotenv` when the stack is synthesized/deployed.
+
+Add your email addresses for SNS subscriptions on the **`createProductTopic`** topic:
+
+```env
+PRODUCTS_TABLE_NAME=aws_rs_front_dynamo_products
+STOCKS_TABLE_NAME=aws_rs_front_dynamo_stocks
+
+# All product-created notifications (no filter)
+CREATE_PRODUCT_TOPIC_EMAIL=you@example.com
+
+# Only when price >= 50 (see constants/sns.ts → HIGH_PRICE_THRESHOLD)
+CREATE_PRODUCT_TOPIC_EMAIL_HIGH_PRICE=you-high-price@example.com
+
+# Only when count < 10 (see constants/sns.ts → LOW_STOCK_THRESHOLD)
+CREATE_PRODUCT_TOPIC_EMAIL_LOW_STOCK=you-low-stock@example.com
+```
+
+| Variable | Purpose |
+| -------- | ------- |
+| `CREATE_PRODUCT_TOPIC_EMAIL` | Default subscription — receives **every** notification from `catalogBatchProcess` |
+| `CREATE_PRODUCT_TOPIC_EMAIL_HIGH_PRICE` | Filtered subscription — `price` attribute **≥ 50** |
+| `CREATE_PRODUCT_TOPIC_EMAIL_LOW_STOCK` | Filtered subscription — `count` attribute **&lt; 10** |
+
+**Same email for all three variables:** AWS allows only **one** subscription per topic + email. The stack then creates a **single** subscription **without a filter** (you receive every import notification). Filtered subscriptions are created only when the three addresses are **different**.
+
+**Different emails:** you get up to three subscriptions; confirm each “Confirm subscription” message in inbox.
+
+**Alternative:** set the same values in **`cdk.json`** → `context`:
+
+- `createProductTopicEmail`
+- `createProductTopicEmailHighPrice`
+- `createProductTopicEmailLowStock`
+
+Environment variables in `.env` take precedence over `cdk.json` context.
+
+**After deploy:** open your inbox and confirm every pending SNS subscription; unconfirmed subscriptions do not receive messages.
+
+**Do not commit real emails** if the repository is public — keep `.env` local only (or use a private fork).
+
 ## Synthesize the CloudFormation template
 
 Checks that the app compiles and prints the template (no AWS changes):
@@ -55,7 +97,7 @@ npx cdk diff
 
 ## Deploy (launch the stack)
 
-Deploys DynamoDB tables, API Gateway, all Lambdas, and integrations:
+Deploys DynamoDB tables, API Gateway, Lambdas, SQS queue (`catalogItemsQueue`), SNS topic (`createProductTopic`) with email subscriptions, and integrations:
 
 ```bash
 npm run deploy
