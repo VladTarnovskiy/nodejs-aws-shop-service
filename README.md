@@ -8,4 +8,6 @@ Backend monorepo layout:
 | Import Service | `import_service/` | Task 5 — S3 CSV import (CDK stack) |
 | Authorization Service | `authorization_service/` | Task 7.1 — `basicAuthorizer` Lambda (Basic auth) |
 
-Deploy each service from its folder after configuring AWS credentials: `npm install` then `npm run deploy`. See each package `README.md` for setup (Import Service: create the S3 bucket with an `uploaded/` folder in the Console per Task 5.1).
+Deploy each service from its folder after configuring AWS credentials: `npm install` then `npm run deploy`. See each package `README.md` for setup.
+
+For **Task 7.x**, deploy **`authorization_service`** before **`import_service`** (Import API `/import` uses `basicAuthorizer`).

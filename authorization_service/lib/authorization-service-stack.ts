@@ -28,7 +28,8 @@ export class AuthorizationServiceStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, "BasicAuthorizerArn", {
       value: this.basicAuthorizer.functionArn,
-      description: "ARN of basicAuthorizer Lambda (for API Gateway TOKEN authorizer)",
+      description:
+        "ARN of basicAuthorizer Lambda (for API Gateway TOKEN authorizer)",
     });
 
     new cdk.CfnOutput(this, "BasicAuthorizerName", {
