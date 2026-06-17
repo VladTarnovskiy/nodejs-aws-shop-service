@@ -7,6 +7,8 @@ vi.mock("./src/db/productRead", () => ({
 
 vi.mock("./src/db/productWrite", () => ({
   createProductAndStockTxn: vi.fn(),
+  updateProductAndStockTxn: vi.fn(),
+  deleteProductAndStockTxn: vi.fn(),
 }));
 
 beforeEach(async () => {
@@ -17,6 +19,8 @@ beforeEach(async () => {
   vi.mocked(reads.listProductsJoined).mockClear();
   vi.mocked(reads.findProductJoinedById).mockClear();
   vi.mocked(writes.createProductAndStockTxn).mockClear();
+  vi.mocked(writes.updateProductAndStockTxn).mockClear();
+  vi.mocked(writes.deleteProductAndStockTxn).mockClear();
 
   vi.mocked(reads.listProductsJoined).mockResolvedValue(mockProducts);
 
@@ -33,4 +37,16 @@ beforeEach(async () => {
       count: input.count ?? 0,
     })
   );
+
+  vi.mocked(writes.updateProductAndStockTxn).mockImplementation(
+    async (productId, input) => ({
+      id: productId,
+      title: input.title,
+      description: input.description ?? "",
+      price: input.price,
+      count: input.count ?? 0,
+    })
+  );
+
+  vi.mocked(writes.deleteProductAndStockTxn).mockResolvedValue(undefined);
 });

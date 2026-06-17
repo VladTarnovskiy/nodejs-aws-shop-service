@@ -3,8 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { handler as batchHandler } from "../../src/lambda/catalogBatchProcess";
 import { productSns } from "../../src/sns/productSnsClient";
 import { handler as createHandler } from "../../src/lambda/createProduct";
+import { handler as deleteHandler } from "../../src/lambda/deleteProduct";
 import { handler as byIdHandler } from "../../src/lambda/getProductsById";
 import { handler as listHandler } from "../../src/lambda/getProductsList";
+import { handler as updateHandler } from "../../src/lambda/updateProduct";
 
 describe("lambda handlers", () => {
   beforeEach(() => {
@@ -37,6 +39,25 @@ describe("lambda handlers", () => {
       body: JSON.stringify({ title: "Entry", price: 1 }),
     } as APIGatewayProxyEvent);
     expect(res.statusCode).toBe(201);
+  });
+
+  it("updateProduct entry delegates to update handler", async () => {
+    const res = await updateHandler({
+      httpMethod: "PUT",
+      path: "/products/x",
+      pathParameters: { productId: "00000000-0000-0000-0000-000000000000" },
+      body: JSON.stringify({ title: "Entry", price: 1 }),
+    } as unknown as APIGatewayProxyEvent);
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("deleteProduct entry delegates to delete handler", async () => {
+    const res = await deleteHandler({
+      httpMethod: "DELETE",
+      path: "/products/x",
+      pathParameters: { productId: "00000000-0000-0000-0000-000000000000" },
+    } as unknown as APIGatewayProxyEvent);
+    expect(res.statusCode).toBe(404);
   });
 
   it("catalogBatchProcess handles SQS events", async () => {
