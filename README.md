@@ -7,6 +7,7 @@ Backend monorepo layout:
 | Product Service | `product_service/` | API Gateway, Lambda, DynamoDB |
 | Import Service | `import_service/` | Task 5 — S3 CSV import (CDK stack) |
 | Authorization Service | `authorization_service/` | Task 7.1 — `basicAuthorizer` Lambda (Basic auth) |
+| BFF Service | `bff_service/` | Task 10.1 — proxy to Product and Cart APIs |
 
 Deploy each service from its folder after configuring AWS credentials: `npm install` then `npm run deploy`. See each package `README.md` for setup.
 
