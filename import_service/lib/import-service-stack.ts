@@ -7,6 +7,7 @@ import * as s3n from "aws-cdk-lib/aws-s3-notifications";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import type { Construct } from "constructs";
+import { BASIC_AUTHORIZER_FUNCTION_NAME } from "../constants/authorizer";
 import {
   importBucketNameForAccount,
   PARSED_PREFIX,
@@ -105,14 +106,48 @@ export class ImportServiceStack extends cdk.Stack {
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: apigateway.Cors.DEFAULT_HEADERS,
       },
     });
+
+    const corsGatewayHeaders = {
+      "Access-Control-Allow-Origin": "'*'",
+      "Access-Control-Allow-Headers": "'*'",
+    };
+
+    api.addGatewayResponse("Unauthorized", {
+      type: apigateway.ResponseType.UNAUTHORIZED,
+      responseHeaders: corsGatewayHeaders,
+    });
+
+    api.addGatewayResponse("AccessDenied", {
+      type: apigateway.ResponseType.ACCESS_DENIED,
+      responseHeaders: corsGatewayHeaders,
+    });
+
+    const basicAuthorizer = lambda.Function.fromFunctionName(
+      this,
+      "BasicAuthorizer",
+      BASIC_AUTHORIZER_FUNCTION_NAME,
+    );
+
+    const basicAuthAuthorizer = new apigateway.TokenAuthorizer(
+      this,
+      "BasicAuthAuthorizer",
+      {
+        handler: basicAuthorizer,
+        identitySource: "method.request.header.Authorization",
+        resultsCacheTtl: cdk.Duration.seconds(0),
+      },
+    );
 
     const importResource = api.root.addResource("import");
     importResource.addMethod(
       "GET",
       new apigateway.LambdaIntegration(importProductsFile),
       {
+        authorizer: basicAuthAuthorizer,
+        authorizationType: apigateway.AuthorizationType.CUSTOM,
         requestParameters: {
           "method.request.querystring.name": true,
         },

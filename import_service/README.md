@@ -37,6 +37,17 @@ GET {ImportServiceApiUrl}import?name=products.csv
 
 Response body: the signed URL string only (`text/plain`).
 
+## Task 7.2 — Lambda authorizer on `GET /import`
+
+`GET /import` is protected by the **`basicAuthorizer`** Lambda from **`authorization_service/`** (TOKEN authorizer, `Authorization: Basic …` header).
+
+Deploy order:
+
+1. `authorization_service` — `npm run deploy` (creates `basicAuthorizer`)
+2. `import_service` — `npm run deploy` (wires authorizer to `/import`)
+
+Without a valid `Authorization` header, API Gateway returns **401** / **403** before `importProductsFile` runs.
+
 ### Frontend API paths
 
 Point your **import** API base URL at this stack’s API Gateway origin (same pattern as the product API). Example:

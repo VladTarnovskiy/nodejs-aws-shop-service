@@ -79,19 +79,50 @@ export class ProductServiceStack extends cdk.Stack {
       bundling,
     });
 
+    const updateProduct = new NodejsFunction(this, "updateProduct", {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      functionName: "updateProduct",
+      entry: path.join(__dirname, "../src/lambda/updateProduct.ts"),
+      handler: "handler",
+      timeout: cdk.Duration.seconds(10),
+      environment: lambdaEnv,
+      bundling,
+    });
+
+    const deleteProduct = new NodejsFunction(this, "deleteProduct", {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      functionName: "deleteProduct",
+      entry: path.join(__dirname, "../src/lambda/deleteProduct.ts"),
+      handler: "handler",
+      timeout: cdk.Duration.seconds(10),
+      environment: lambdaEnv,
+      bundling,
+    });
+
     productsTable.grantReadData(getProductsList);
     stocksTable.grantReadData(getProductsList);
     productsTable.grantReadData(getProductsById);
     stocksTable.grantReadData(getProductsById);
+    productsTable.grantReadData(updateProduct);
+    stocksTable.grantReadData(updateProduct);
+    productsTable.grantReadData(deleteProduct);
+    stocksTable.grantReadData(deleteProduct);
     productsTable.grantWriteData(createProduct);
     stocksTable.grantWriteData(createProduct);
-    createProduct.addToRolePolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ["dynamodb:TransactWriteItems"],
-        resources: [productsTable.tableArn, stocksTable.tableArn],
-      }),
-    );
+    productsTable.grantWriteData(updateProduct);
+    stocksTable.grantWriteData(updateProduct);
+    productsTable.grantWriteData(deleteProduct);
+    stocksTable.grantWriteData(deleteProduct);
+
+    for (const fn of [createProduct, updateProduct, deleteProduct]) {
+      fn.addToRolePolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ["dynamodb:TransactWriteItems"],
+          resources: [productsTable.tableArn, stocksTable.tableArn],
+        }),
+      );
+    }
 
     const catalogItemsQueue = new sqs.Queue(this, "CatalogItemsQueue", {
       queueName: CATALOG_ITEMS_QUEUE_NAME,
@@ -159,6 +190,14 @@ export class ProductServiceStack extends cdk.Stack {
     productById.addMethod(
       "GET",
       new apigateway.LambdaIntegration(getProductsById),
+    );
+    productById.addMethod(
+      "PUT",
+      new apigateway.LambdaIntegration(updateProduct),
+    );
+    productById.addMethod(
+      "DELETE",
+      new apigateway.LambdaIntegration(deleteProduct),
     );
 
     new cdk.CfnOutput(this, "ProductServiceApiUrl", {
