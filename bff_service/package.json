@@ -1,0 +1,26 @@
+{
+  "name": "bff-service",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "postinstall": "npm run build",
+    "start": "node dist/server.js",
+    "start:dev": "ts-node src/server.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "deploy:eb": "bash scripts/deploy-eb.sh"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.4.5",
+    "vitest": "^2.1.6"
+  }
+}
