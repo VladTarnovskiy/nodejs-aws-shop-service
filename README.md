@@ -11,4 +11,6 @@ Backend monorepo layout:
 
 Deploy each service from its folder after configuring AWS credentials: `npm install` then `npm run deploy`. See each package `README.md` for setup.
 
+**BFF Service (Task 10.2):** from `bff_service/` copy `.env.example` to `.env`, then run `npm run deploy:eb`. Application name: `VladTarnovskiy-bff-api`, environment: `prod`, CNAME: `VladTarnovskiy-bff-api-prod`. Uses `--single` (no load balancer).
+
 For **Task 7.x**, deploy **`authorization_service`** before **`import_service`** (Import API `/import` uses `basicAuthorizer`).

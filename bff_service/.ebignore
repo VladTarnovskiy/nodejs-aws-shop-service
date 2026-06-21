@@ -1,0 +1,7 @@
+tests/
+vitest.config.ts
+.env
+.env.example
+*.md
+.git/
+.gitignore

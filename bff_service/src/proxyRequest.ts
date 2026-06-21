@@ -1,6 +1,7 @@
 import http from "http";
 import https from "https";
 import { IncomingMessage, ServerResponse } from "http";
+import { ALLOWED_RECIPIENTS, withCorsHeaders } from "./cors";
 import {
   buildTargetUrl,
   filterRequestHeaders,
@@ -12,7 +13,10 @@ import {
 const CANNOT_PROCESS_MESSAGE = "Cannot process request";
 
 function sendCannotProcess(res: ServerResponse): void {
-  res.writeHead(502, { "Content-Type": "text/plain; charset=utf-8" });
+  res.writeHead(
+    502,
+    withCorsHeaders({ "Content-Type": "text/plain; charset=utf-8" }),
+  );
   res.end(CANNOT_PROCESS_MESSAGE);
 }
 
@@ -47,7 +51,10 @@ function pipeUpstreamResponse(
   upstream: IncomingMessage,
   res: ServerResponse,
 ): void {
-  res.writeHead(upstream.statusCode ?? 502, upstream.headers);
+  res.writeHead(
+    upstream.statusCode ?? 502,
+    withCorsHeaders(upstream.headers),
+  );
   upstream.pipe(res);
 }
 
@@ -59,7 +66,11 @@ export async function proxyRequest(
   const { recipientName, remainingPath } = parseRequestPath(requestUrl.pathname);
   const recipientUrl = getRecipientUrl(recipientName);
 
-  if (!recipientName || !recipientUrl) {
+  if (
+    !recipientName ||
+    !ALLOWED_RECIPIENTS.has(recipientName) ||
+    !recipientUrl
+  ) {
     sendCannotProcess(res);
     return;
   }
