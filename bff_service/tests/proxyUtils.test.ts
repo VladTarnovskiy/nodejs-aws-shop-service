@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildTargetUrl,
-  getRecipientUrl,
   parseRequestPath,
+  pickHeaders,
 } from "../src/proxyUtils";
 
 describe("parseRequestPath", () => {
@@ -25,7 +25,7 @@ describe("buildTargetUrl", () => {
   it("appends remaining path and query string to recipient URL", () => {
     expect(
       buildTargetUrl(
-        "https://example.com/prod/products",
+        "https://example.com/prod/products/",
         "/abc",
         "?limit=10",
       ),
@@ -39,18 +39,30 @@ describe("buildTargetUrl", () => {
   });
 });
 
-describe("getRecipientUrl", () => {
-  it("reads recipient URL from environment", () => {
-    process.env.product = "https://example.com/products";
-
-    expect(getRecipientUrl("product")).toBe("https://example.com/products");
-
-    delete process.env.product;
+describe("pickHeaders", () => {
+  it("removes undefined values", () => {
+    expect(
+      pickHeaders({
+        "content-type": "application/json",
+        "x-missing": undefined,
+      }),
+    ).toEqual({
+      "content-type": "application/json",
+    });
   });
 
-  it("returns undefined when mapping is missing", () => {
-    delete process.env.unknown;
-
-    expect(getRecipientUrl("unknown")).toBeUndefined();
+  it("removes hop-by-hop headers for upstream requests", () => {
+    expect(
+      pickHeaders(
+        {
+          authorization: "Basic token",
+          host: "localhost:3000",
+          connection: "keep-alive",
+        },
+        { omitHopByHop: true },
+      ),
+    ).toEqual({
+      authorization: "Basic token",
+    });
   });
 });

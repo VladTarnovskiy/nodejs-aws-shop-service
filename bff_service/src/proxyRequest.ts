@@ -1,23 +1,30 @@
 import http from "http";
 import https from "https";
 import { IncomingMessage, ServerResponse } from "http";
-import { ALLOWED_RECIPIENTS, withCorsHeaders } from "./cors";
+import { withCorsHeaders } from "./cors";
 import {
+  getCachedProductsList,
+  isProductsListRequest,
+  setCachedProductsList,
+} from "./productsListCache";
+import {
+  ALLOWED_RECIPIENTS,
   buildTargetUrl,
-  filterRequestHeaders,
-  getRecipientUrl,
   parseRequestPath,
-  readRequestBody,
+  pickHeaders,
+  readBody,
 } from "./proxyUtils";
 
 const CANNOT_PROCESS_MESSAGE = "Cannot process request";
 
-function sendCannotProcess(res: ServerResponse): void {
-  res.writeHead(
-    502,
-    withCorsHeaders({ "Content-Type": "text/plain; charset=utf-8" }),
-  );
-  res.end(CANNOT_PROCESS_MESSAGE);
+function sendResponse(
+  res: ServerResponse,
+  statusCode: number,
+  headers: Record<string, string | string[] | undefined>,
+  body: Buffer | string,
+): void {
+  res.writeHead(statusCode, withCorsHeaders(headers));
+  res.end(body);
 }
 
 function requestUpstream(
@@ -39,7 +46,7 @@ function requestUpstream(
           ...(body.length > 0 ? { "content-length": String(body.length) } : {}),
         },
       },
-      (res) => resolve(res),
+      resolve,
     );
 
     req.on("error", reject);
@@ -47,31 +54,26 @@ function requestUpstream(
   });
 }
 
-function pipeUpstreamResponse(
-  upstream: IncomingMessage,
-  res: ServerResponse,
-): void {
-  res.writeHead(
-    upstream.statusCode ?? 502,
-    withCorsHeaders(upstream.headers),
-  );
-  upstream.pipe(res);
-}
-
 export async function proxyRequest(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  const requestUrl = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
-  const { recipientName, remainingPath } = parseRequestPath(requestUrl.pathname);
-  const recipientUrl = getRecipientUrl(recipientName);
+  const requestUrl = new URL(
+    req.url ?? "/",
+    `http://${req.headers.host ?? "localhost"}`,
+  );
+  const { recipientName, remainingPath } = parseRequestPath(
+    requestUrl.pathname,
+  );
+  const recipientUrl = process.env[recipientName];
+  const method = req.method ?? "GET";
 
   if (
     !recipientName ||
     !ALLOWED_RECIPIENTS.has(recipientName) ||
     !recipientUrl
   ) {
-    sendCannotProcess(res);
+    sendResponse(res, 502, { "Content-Type": "text/plain; charset=utf-8" }, CANNOT_PROCESS_MESSAGE);
     return;
   }
 
@@ -80,20 +82,41 @@ export async function proxyRequest(
     remainingPath,
     requestUrl.search,
   );
-  const body = await readRequestBody(req);
-  const headers = filterRequestHeaders(req.headers);
+  const cacheProductsList = isProductsListRequest(
+    method,
+    recipientName,
+    remainingPath,
+  );
+
+  if (cacheProductsList) {
+    const cached = getCachedProductsList(targetUrl);
+
+    if (cached) {
+      sendResponse(res, cached.statusCode, cached.headers, cached.body);
+      return;
+    }
+  }
+
+  const body = await readBody(req);
+  const headers = pickHeaders(req.headers, { omitHopByHop: true });
 
   try {
-    const upstream = await requestUpstream(
-      targetUrl,
-      req.method ?? "GET",
-      headers,
-      body,
-    );
+    const upstream = await requestUpstream(targetUrl, method, headers, body);
+    const responseBody = await readBody(upstream);
+    const responseHeaders = pickHeaders(upstream.headers);
+    const statusCode = upstream.statusCode ?? 502;
 
-    pipeUpstreamResponse(upstream, res);
+    if (cacheProductsList && statusCode === 200) {
+      setCachedProductsList(targetUrl, {
+        statusCode,
+        headers: responseHeaders,
+        body: responseBody,
+      });
+    }
+
+    sendResponse(res, statusCode, responseHeaders, responseBody);
   } catch (error) {
     console.error(`Failed to proxy request to ${targetUrl}`, error);
-    sendCannotProcess(res);
+    sendResponse(res, 502, { "Content-Type": "text/plain; charset=utf-8" }, CANNOT_PROCESS_MESSAGE);
   }
 }

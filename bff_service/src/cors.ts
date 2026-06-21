@@ -1,6 +1,5 @@
 import { ServerResponse } from "http";
-
-export const ALLOWED_RECIPIENTS = new Set(["product", "products", "cart"]);
+import { pickHeaders } from "./proxyUtils";
 
 export const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -11,16 +10,8 @@ export const CORS_HEADERS: Record<string, string> = {
 export function withCorsHeaders(
   headers: Record<string, string | string[] | undefined> = {},
 ): Record<string, string | string[]> {
-  const normalized: Record<string, string | string[]> = {};
-
-  for (const [key, value] of Object.entries(headers)) {
-    if (value !== undefined) {
-      normalized[key] = value;
-    }
-  }
-
   return {
-    ...normalized,
+    ...pickHeaders(headers),
     ...CORS_HEADERS,
   };
 }

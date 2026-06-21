@@ -10,6 +10,8 @@ const HOP_BY_HOP_HEADERS = new Set([
   "host",
 ]);
 
+export const ALLOWED_RECIPIENTS = new Set(["product", "products", "cart"]);
+
 export function parseRequestPath(pathname: string): {
   recipientName: string;
   remainingPath: string;
@@ -33,49 +35,37 @@ export function buildTargetUrl(
   remainingPath: string,
   search: string,
 ): string {
-  const base = recipientUrl.endsWith("/")
-    ? recipientUrl.slice(0, -1)
-    : recipientUrl;
-  const pathSuffix = remainingPath || "";
-  const query = search.startsWith("?") ? search : search ? `?${search}` : "";
-
-  return `${base}${pathSuffix}${query}`;
+  const base = recipientUrl.replace(/\/$/, "");
+  return `${base}${remainingPath}${search}`;
 }
 
-export function getRecipientUrl(recipientName: string): string | undefined {
-  const value = process.env[recipientName];
-
-  if (!value) {
-    return undefined;
-  }
-
-  return value;
-}
-
-export function filterRequestHeaders(
+export function pickHeaders(
   headers: Record<string, string | string[] | undefined>,
+  options?: { omitHopByHop?: boolean },
 ): Record<string, string | string[]> {
-  const filtered: Record<string, string | string[]> = {};
+  const picked: Record<string, string | string[]> = {};
 
   for (const [name, value] of Object.entries(headers)) {
-    if (value === undefined || HOP_BY_HOP_HEADERS.has(name.toLowerCase())) {
+    if (value === undefined) {
       continue;
     }
 
-    filtered[name] = value;
+    if (options?.omitHopByHop && HOP_BY_HOP_HEADERS.has(name.toLowerCase())) {
+      continue;
+    }
+
+    picked[name] = value;
   }
 
-  return filtered;
+  return picked;
 }
 
-export function readRequestBody(
-  req: NodeJS.ReadableStream,
-): Promise<Buffer> {
+export function readBody(stream: NodeJS.ReadableStream): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
 
-    req.on("data", (chunk: Buffer) => chunks.push(chunk));
-    req.on("end", () => resolve(Buffer.concat(chunks)));
-    req.on("error", reject);
+    stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+    stream.on("end", () => resolve(Buffer.concat(chunks)));
+    stream.on("error", reject);
   });
 }
